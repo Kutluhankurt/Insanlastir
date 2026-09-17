@@ -1,0 +1,24 @@
+style: casual_business
+
+naturalization:
+  strength: 0.65
+
+errors:
+  typo_rate: 0.006
+  punctuation_error_rate: 0.05
+  predicate_variation_rate: 0.20
+  known_word_error_rate: 0.03
+  phonetic_rate: 0.05
+
+allow:
+  casual_verbs: true
+  sentence_shortening: true
+  spoken_forms: true
+
+protect:
+  numbers: true
+  urls: true
+  ids: true
+  version_numbers: true
+  code: true
+  proper_nouns: true

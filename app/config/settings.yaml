@@ -1,0 +1,21 @@
+# Plan Bölüm 51/53 ile uyumlu genel ayarlar.
+default_persona: technical_engineer
+
+fallback:
+  # Bölüm 51: fallback merdiveni
+  per_sentence_analysis_timeout_ms: 200
+  morphological_confidence_threshold: 0.6
+
+quality_gate:
+  # Bölüm 22: error budget
+  max_errors_per_100_words: 5
+  max_errors_per_sentence: 1
+  max_predicate_errors_per_paragraph: 2
+  max_typo_errors_per_paragraph: 1
+
+cooldown:
+  # Bölüm 23: aynı hatanın tekrarını önleme
+  spoken_yor_sentences: 3
+
+versions:
+  rule_engine_version: "0.1.0"

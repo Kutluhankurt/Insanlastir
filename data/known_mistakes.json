@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "description": "Tek varyantlı, olasılığı sabit (1.0) bilinen yanlış yazımlar. Çok varyantlı kelimeler için human_error_dictionary.json kullanılır.",
+  "entries": {
+    "yalnız": "yanlız",
+    "yanlış": "yalnış",
+    "herkes": "herkez",
+    "maalesef": "malesef",
+    "orijinal": "orjinal",
+    "sürpriz": "süpriz",
+    "direkt": "direk"
+  }
+}

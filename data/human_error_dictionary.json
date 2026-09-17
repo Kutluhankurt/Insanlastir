@@ -1,0 +1,45 @@
+{
+  "version": "0.1.0",
+  "entries": [
+    {
+      "correct": "bir şey",
+      "variants": [
+        {"value": "birşey", "weight": 0.55, "error_type": "compound_spacing", "styles": ["casual", "whatsapp", "social"], "semantic_risk": "low"},
+        {"value": "bişey", "weight": 0.30, "error_type": "phonetic", "styles": ["whatsapp", "young_casual"], "semantic_risk": "low"},
+        {"value": "bi şey", "weight": 0.15, "error_type": "phonetic", "styles": ["whatsapp", "young_casual"], "semantic_risk": "low"}
+      ]
+    },
+    {
+      "correct": "her şey",
+      "variants": [
+        {"value": "herşey", "weight": 0.85, "error_type": "compound_spacing", "styles": ["casual", "whatsapp", "social"], "semantic_risk": "low"},
+        {"value": "hersey", "weight": 0.15, "error_type": "turkish_char_loss", "styles": ["whatsapp"], "semantic_risk": "low"}
+      ]
+    },
+    {
+      "correct": "hiçbir",
+      "variants": [
+        {"value": "hiç bir", "weight": 1.0, "error_type": "compound_spacing", "styles": ["casual", "whatsapp"], "semantic_risk": "low"}
+      ]
+    },
+    {
+      "correct": "değil mi",
+      "variants": [
+        {"value": "dimi", "weight": 0.60, "error_type": "phonetic", "styles": ["whatsapp", "young_casual"], "semantic_risk": "low"},
+        {"value": "değilmi", "weight": 0.40, "error_type": "compound_spacing", "styles": ["casual", "whatsapp"], "semantic_risk": "low"}
+      ]
+    },
+    {
+      "correct": "şu an",
+      "variants": [
+        {"value": "şuan", "weight": 1.0, "error_type": "compound_spacing", "styles": ["casual", "technical_engineer", "whatsapp"], "semantic_risk": "low"}
+      ]
+    },
+    {
+      "correct": "yine de",
+      "variants": [
+        {"value": "yinede", "weight": 1.0, "error_type": "compound_spacing", "styles": ["casual", "whatsapp"], "semantic_risk": "low"}
+      ]
+    }
+  ]
+}

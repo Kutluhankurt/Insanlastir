@@ -1,0 +1,47 @@
+{
+  "version": "0.1.0",
+  "base_weights": {
+    "predicate": 4.0,
+    "verb_yor": 3.5,
+    "future_acak_ecek": 3.0,
+    "de_da": 3.0,
+    "ki": 2.5,
+    "mi": 2.5,
+    "known_mistake": 4.0,
+    "normal_noun": 0.5,
+    "number": 0.0,
+    "url": 0.0,
+    "device_id": 0.0,
+    "technical_identifier": 0.0
+  },
+  "rules": [
+    {
+      "id": "yor_1sg_spoken",
+      "description": "-yorum -> -yom",
+      "suffix_from": "yorum",
+      "suffix_to": "yom",
+      "weight_key": "verb_yor"
+    },
+    {
+      "id": "yor_1pl_spoken",
+      "description": "-yoruz -> -yoz",
+      "suffix_from": "yoruz",
+      "suffix_to": "yoz",
+      "weight_key": "verb_yor"
+    },
+    {
+      "id": "future_1sg_spoken",
+      "description": "-acağım/-eceğim -> stem + dar ünlü (4 yönlü) + c + a/e (2 yönlü) + m",
+      "suffixes": ["acağım", "eceğim"],
+      "person_suffix": "c(a/e)m",
+      "weight_key": "future_acak_ecek"
+    },
+    {
+      "id": "future_1pl_spoken",
+      "description": "-acağız/-eceğiz -> stem + dar ünlü (4 yönlü) + c + a/e (2 yönlü) + z",
+      "suffixes": ["acağız", "eceğiz"],
+      "person_suffix": "c(a/e)z",
+      "weight_key": "future_acak_ecek"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+style: whatsapp
+
+naturalization:
+  strength: 0.85
+
+errors:
+  typo_rate: 0.02
+  punctuation_error_rate: 0.12
+  predicate_variation_rate: 0.35
+  known_word_error_rate: 0.08
+  phonetic_rate: 0.20
+
+allow:
+  abbreviations: true
+  spoken_forms: true
+  lowercase_sentence_start: true
+
+protect:
+  numbers: true
+  urls: true
+  ids: true
+  version_numbers: true
+  code: true
+  proper_nouns: true

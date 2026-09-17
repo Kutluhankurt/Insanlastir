@@ -1,0 +1,22 @@
+style: technical_engineer
+
+naturalization:
+  strength: 0.55
+
+errors:
+  typo_rate: 0.003
+  punctuation_error_rate: 0.02
+  predicate_variation_rate: 0.12
+  known_word_error_rate: 0.015
+
+allow:
+  casual_verbs: true
+  sentence_shortening: true
+
+protect:
+  numbers: true
+  urls: true
+  ids: true
+  version_numbers: true
+  code: true
+  proper_nouns: true
