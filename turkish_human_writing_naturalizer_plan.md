@@ -794,6 +794,18 @@ Negation Check
 Named Entity Check
 ```
 
+### Uygulama notu (Faz 3)
+
+`app/guardian/semantic.py`, Bölüm 27'de önerilen çok dilli embedding
+yaklaşımıyla gerçeklendi: `intfloat/multilingual-e5-small`
+(`sentence-transformers` üzerinden). `torch` gibi ağır bir bağımlılık ve
+ilk çalıştırmada ~470MB model indirmesi gerektirdiği için **opt-in**
+tutuldu (`pip install -e ".[semantic]"`) — Naturalizer'ın `llm` extra'sı
+ile aynı felsefe: kurulu değilse `None` döner, Quality Gate bu kontrolü
+sessizce atlar, pipeline çökmez. Protected Token Equality, Number
+Equality ve Negation Check zaten `app/guardian/quality_gate.py`'de
+mevcuttu; Named Entity Check henüz yok.
+
 ---
 
 # 20. Quality Gate

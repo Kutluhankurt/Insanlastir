@@ -19,6 +19,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7.4,<8.0"]
 llm = ["anthropic>=0.40,<1.0"]
+semantic = ["sentence-transformers>=2.2,<4.0"]
 
 [project.scripts]
 turkish-humanizer = "app.cli:main"

@@ -70,6 +70,23 @@ sessizce no-op'a düşer. Bu katman **Claude Opus 5** (`claude-opus-5`)
 kullanır; her `/humanize` isteği gerçek para harcar, bu yüzden kendi API
 anahtarınızla bilinçli olarak etkinleştirmeniz gerekir.
 
+### Semantic Guardian (Faz 3, opt-in — yerel, ağır bağımlılık)
+
+Varsayılan olarak `quality_passed`/`semantic_score` alanları anlam
+benzerliğini kontrol ETMEZ (Bölüm 19 embedding kontrolü kapalıdır).
+Çok dilli embedding tabanlı (`intfloat/multilingual-e5-small`) gerçek
+benzerlik kontrolünü etkinleştirmek için:
+
+```bash
+.venv/bin/pip install -e ".[semantic]"
+```
+
+API maliyeti yoktur (model yerelde çalışır) ama `torch` gibi ağır bir
+bağımlılık kurar ve ilk çalıştırmada Hugging Face'ten ~470MB model
+indirir — bu yüzden opt-in tutuldu, Faz 1/2'nin hafif kurulumunu
+bozmasın diye. Kurulu değilse `semantic_score` `null` döner ve Quality
+Gate bu kontrolü sessizce atlar.
+
 ### API
 
 ```bash
@@ -127,12 +144,15 @@ CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
   dönüşümü — **opt-in**, `ANTHROPIC_API_KEY` yoksa/`anthropic` kurulu
   değilse no-op'a düşer, hata pipeline'ı çökertmez —
   `app/naturalizer/naturalizer.py`
+- Semantic Guardian (Faz 3): çok dilli embedding (`multilingual-e5-small`)
+  tabanlı cosine similarity — **opt-in**, `sentence-transformers` kurulu
+  değilse `semantic_score` `null` döner, Quality Gate kontrolü atlar —
+  `app/guardian/semantic.py`
 
 **Henüz stub / sonraki fazlar:**
 - `app/morphology/dependency.py` — gerçek dependency parsing yok (Stanza/
   Trankit entegrasyonu yapılmadı); predicate tespiti şu an yalnızca POS
   etiketiyle kısmen karşılanıyor (plan Bölüm 50)
-- `app/guardian/semantic.py` — embedding tabanlı benzerlik yok (Faz 3)
 - `de/da/ki/mi` motoru **olası** POS'a bakıyor, tam bağlamsal
   disambiguation yapmıyor (zeyrek'te istatistiksel disambiguator yok) —
   bkz. plan Bölüm 50'deki sınırlama notu
@@ -142,8 +162,7 @@ CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
 ## Sıradaki adım
 
 Dependency parsing (Stanza/Trankit) eklenerek predicate tespiti ve
-negation guard bağlamsal hale getirilebilir; ardından Semantic Guardian'ın
-embedding tabanlı benzerlik kontrolü (Faz 3).
+negation guard bağlamsal hale getirilebilir.
 
 ## Lisans
 
