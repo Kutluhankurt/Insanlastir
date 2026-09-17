@@ -8,8 +8,9 @@ hale getiren kural tabanlı bir humanizer.
 
 Tasarım dokümanı: [`turkish_human_writing_naturalizer_plan.md`](turkish_human_writing_naturalizer_plan.md).
 
-Bu depo, plandaki **Faz 1 — Rule Engine** kapsamını ve **Faz 2 — Naturalizer**
-katmanının (opt-in, Claude API tabanlı) ilk sürümünü içerir.
+Bu depo, plandaki **Faz 1 — Rule Engine**'i tam kapsamıyla, **Faz 2 —
+Naturalizer** ve **Faz 3 — Semantic Guardian** katmanlarını (opt-in)
+içerir. Bkz. aşağıdaki "Faz 1 kapsamı" bölümü.
 
 ## Kurulum
 
@@ -87,6 +88,21 @@ indirir — bu yüzden opt-in tutuldu, Faz 1/2'nin hafif kurulumunu
 bozmasın diye. Kurulu değilse `semantic_score` `null` döner ve Quality
 Gate bu kontrolü sessizce atlar.
 
+### Dependency parsing (opt-in — yerel, ağır bağımlılık)
+
+Varsayılan olarak Human Error Engine, bir cümledeki tüm yüklem
+adaylarına eşit ağırlık verir. Stanza (Türkçe UD IMST treebank) ile
+gerçek ROOT tespitini etkinleştirmek için:
+
+```bash
+.venv/bin/pip install -e ".[dependency]"
+```
+
+Etkinleştirildiğinde, cümlenin ana yüklemi (ROOT) alt cümledeki bir
+fiile göre konuşma diline dönüştürülmeye daha yatkın olur (Bölüm 5'teki
+`predicate` ağırlığı, 4.0). Kurulu değilse davranış değişmez. Aynı
+`torch` tabanlı ağır bağımlılık uyarısı burada da geçerli.
+
 ### API
 
 ```bash
@@ -148,11 +164,14 @@ CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
   tabanlı cosine similarity — **opt-in**, `sentence-transformers` kurulu
   değilse `semantic_score` `null` döner, Quality Gate kontrolü atlar —
   `app/guardian/semantic.py`
+- Dependency parsing: Stanza (Türkçe UD IMST) ile gerçek ROOT tespiti,
+  cümlenin ana yüklemine Bölüm 5'teki `predicate` ağırlığını (4.0)
+  uygular — **opt-in**, kurulu değilse tüm yüklem adayları eskisi gibi
+  eşit ağırlıklı kalır — `app/morphology/dependency.py`. Negation
+  guard'a kasıtlı olarak bağlanmadı (bkz. plan Bölüm 50'deki gerekçe:
+  cross-text parse hizalama kırılgan bir problem)
 
 **Henüz stub / sonraki fazlar:**
-- `app/morphology/dependency.py` — gerçek dependency parsing yok (Stanza/
-  Trankit entegrasyonu yapılmadı); predicate tespiti şu an yalnızca POS
-  etiketiyle kısmen karşılanıyor (plan Bölüm 50)
 - `de/da/ki/mi` motoru **olası** POS'a bakıyor, tam bağlamsal
   disambiguation yapmıyor (zeyrek'te istatistiksel disambiguator yok) —
   bkz. plan Bölüm 50'deki sınırlama notu
@@ -161,8 +180,8 @@ CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
 
 ## Sıradaki adım
 
-Dependency parsing (Stanza/Trankit) eklenerek predicate tespiti ve
-negation guard bağlamsal hale getirilebilir.
+Faz 1-3'ün çekirdeği tamamlandı. Kalan büyük iş: gerçek bir dataset
+(Faz 4, Bölüm 31-33) toplamak ve A/B değerlendirmesi (Bölüm 38) yapmak.
 
 ## Lisans
 

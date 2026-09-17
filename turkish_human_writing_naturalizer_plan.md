@@ -1988,18 +1988,36 @@ ortaya çıktı ve karar revize edildi:**
     sınırlamayı göz önünde bulundurarak (liberal/olası-say yaklaşımı,
     olasılıksal uygulama) tasarlandı.
 
-Stanza/Trankit (dependency parsing) entegrasyonu henüz yapılmadı;
-`app/morphology/dependency.py` hâlâ no-op stub. Bir sonraki adım olarak
-kalıyor — predicate tespiti şu an zeyrek'in POS etiketleriyle (`Verb`)
-kısmen karşılanıyor, tam dependency parse (ROOT ilişkisi) yok.
-
 **Gerekçe (revize):** zeyrek, JVM/Maven derleme maliyeti olmadan
 Zemberek'in ek-seviyesi morfolojik gücünün büyük kısmını (POS, lemma,
 morfem listesi, `Neg`/`Fut`/`Prog1` gibi etiketler) sağlıyor. Bu, "clone
 edip doğrudan kullan" hedefi için Zemberek+JPype'a göre çok daha pratik.
-Bedeli: istatistiksel disambiguation eksikliği ve dependency parsing'in
-hâlâ eksik olması — bu ikisi ilerideki bir fazda (muhtemelen Stanza
-eklenerek) kapatılmalı.
+Bedeli: istatistiksel disambiguation eksikliği.
+
+### Dependency parsing uygulama notu
+
+Stanza (Türkçe UD IMST treebank) `app/morphology/dependency.py`'de
+gerçeklendi ve `app/error_engine/engine.py`'ye bağlandı:
+`find_root_words()` cümlenin ROOT'a bağlı (ana yüklem) kelimesini bulur;
+Human Error Engine bu kelimeye Bölüm 5'teki daha önce hiç kullanılmayan
+`predicate` ağırlığını (4.0) uygular — böylece cümlenin ana yüklemi, alt
+cümledeki bir fiile göre konuşma diline dönüştürülmeye daha yatkın olur
+(gerçek insan konuşmasında da genelde önce ana yüklem gevşer).
+
+- `stanza`, tıpkı `sentence-transformers` gibi `torch` tabanlı ağır bir
+  bağımlılık ve ilk çalıştırmada model indirmesi gerektirir; bu yüzden
+  opt-in tutuldu (`pip install -e ".[dependency]"`). Kurulu değilse
+  `find_root_words()` boş liste döner ve davranış önceki haliyle
+  (tüm eşleşen yüklemler eşit ağırlıklı) aynı kalır.
+- **Negation guard'a (Bölüm 18) kasıtlı olarak bağlanmadı:** negation
+  guard orijinal metinle humanize edilmiş metni karşılaştırıyor
+  (cross-text). Naturalizer kelime sırasını/cümle yapısını
+  değiştirebildiği için iki farklı parse ağacını hizalamak kırılgan bir
+  problem; mevcut kelime-bazlı sayım bu karşılaştırma için daha sağlam.
+  Dependency parse yalnızca TEK metin üzerinde (ROOT tespiti gibi)
+  güvenle kullanılıyor.
+- En son 3.8-uyumlu sürüme (`stanza<1.11.0`) sabitlendi — 1.11.0 Python
+  3.9+ gerektiriyor, bu depo hâlâ 3.8'i destekliyor.
 
 ---
 

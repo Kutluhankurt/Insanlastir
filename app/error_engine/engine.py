@@ -1,9 +1,10 @@
 """Human Error Engine orchestrator (Bölüm 4, Bölüm 25 ana mimari).
 
-Pipeline (Faz 1 kapsamı - Naturalizer şu an no-op):
+Pipeline:
 
-    text -> naturalizer (no-op) -> de/da/ki/mi motoru (Bölüm 9)
-         -> protected span tespiti -> tokenize
+    text -> naturalizer (Bölüm 3.1, opt-in LLM) -> de/da/ki/mi motoru (Bölüm 9)
+         -> protected span tespiti -> tokenize -> dependency parse (Bölüm 50,
+            opt-in - ROOT predicate ağırlık boost'u için)
          -> predicate + typo (token bazlı) -> lexical dictionary (metin bazlı)
          -> punctuation -> Quality Gate -> HumanizeResult
 """
@@ -18,6 +19,7 @@ import yaml
 from app.error_engine import baglac_rules, lexical_rules, predicate_rules, punctuation_rules, scoring, typo_rules
 from app.guardian import quality_gate as quality_gate_module
 from app.guardian.protected_tokens import find_protected_spans, is_inside_protected
+from app.morphology import dependency
 from app.morphology.tokenizer import tokenize
 from app.naturalizer.naturalizer import naturalize
 
@@ -117,6 +119,12 @@ def humanize(
     protected_spans = find_protected_spans(naturalized)
     tokens = tokenize(naturalized)
 
+    # Bölüm 50: `stanza` kuruluysa (opt-in) cümlenin ROOT'una (ana
+    # yüklem) Bölüm 5'teki "predicate" ağırlığını (4.0) uygular; kurulu
+    # değilse root_words boş kalır ve davranış önceki haliyle aynıdır.
+    root_words = {w.lower() for w in dependency.find_root_words(naturalized)}
+    predicate_weight = predicate_weights["base_weights"].get("predicate", 1.0)
+
     output_parts: List[str] = []
     last_end = 0
 
@@ -134,6 +142,8 @@ def humanize(
         if match is not None:
             weight_key = _PREDICATE_RULE_TO_WEIGHT_KEY.get(match.rule, "predicate")
             base_weight = predicate_weights["base_weights"].get(weight_key, 1.0)
+            if word.lower() in root_words:
+                base_weight = max(base_weight, predicate_weight)
             prob = scoring.error_score(base_weight, predicate_rate)
             triggered = rng.random() < prob
             changes.append(ChangeTrace(
