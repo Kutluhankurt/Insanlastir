@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "turkish-humanizer"
+name = "insanlastir"
 version = "0.1.0"
-description = "Türkçe LLM çıktılarını daha doğal, insan yazımına yakın hale getiren kural tabanlı humanizer (Faz 1)."
+description = "Türkçe LLM çıktılarını daha doğal, insan yazımına yakın hale getiren kural tabanlı humanizer."
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
@@ -24,7 +24,7 @@ semantic = ["sentence-transformers>=2.2,<4.0"]
 dependency = ["stanza>=1.5,<1.11.0"]
 
 [project.scripts]
-turkish-humanizer = "app.cli:main"
+insanlastir = "app.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["app*"]

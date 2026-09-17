@@ -1,30 +1,74 @@
-# Turkish Human Writing Naturalizer
+# İnsanlaştır
 
-[![CI](https://github.com/Kutluhankurt/turkish-humanizer/actions/workflows/ci.yml/badge.svg)](https://github.com/Kutluhankurt/turkish-humanizer/actions/workflows/ci.yml)
+**Türkçe LLM çıktılarını, anlamı koruyarak gerçek insan yazımına yaklaştıran kural tabanlı motor.**
+
+[![CI](https://github.com/Kutluhankurt/Insanlastir/actions/workflows/ci.yml/badge.svg)](https://github.com/Kutluhankurt/Insanlastir/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue.svg)](pyproject.toml)
 
-Türkçe LLM çıktılarını, anlamı koruyarak daha doğal ve insan yazımına yakın
-hale getiren kural tabanlı bir humanizer.
+---
 
-Tasarım dokümanı: [`turkish_human_writing_naturalizer_plan.md`](turkish_human_writing_naturalizer_plan.md).
+## Neden?
 
-Bu depo, plandaki **Faz 1 — Rule Engine**'i tam kapsamıyla, **Faz 2 —
-Naturalizer** ve **Faz 3 — Semantic Guardian** katmanlarını (opt-in)
-içerir. Bkz. aşağıdaki "Faz 1 kapsamı" bölümü.
+Büyük dil modelleri çok düzgün yazar — çok dengeli cümleler, çok tutarlı
+noktalama, hiç "gevşeme" yok. Gerçek insanlar öyle yazmaz. İnsanlaştır,
+LLM çıktısının üzerine çalışan bir katman: **anlamı bozmadan**, Türkçe'ye
+özgü yüklem çekimlerini, `de/da/ki/mi` bitişmelerini ve bilinen yazım
+alışkanlıklarını kullanarak metni gerçek bir insanın yazdığı gibi
+gösterir.
 
-## Kurulum
+Rastgele karakter bozan bir "typo generator" değildir — Türkçe ünlü
+uyumunu bilen, morfolojik analiz kullanan ve sayı/ID/URL gibi kritik
+verileri asla değiştirmeyen kontrollü bir sistemdir.
+
+```text
+GİRİŞ:   Ben de yarın tekrar kontrol edeceğim.
+ÇIKIŞ:   Bende yarın tekrar kontrol edicem.
+
+GİRİŞ:   Öyle ki herkes bunu biliyor, geliyor musun?
+ÇIKIŞ:   Öyleki herkes bunu biliyor, geliyormusun?
+
+GİRİŞ:   Cihaz 4B3338E8, Engine v1.4.2 üzerinde çalışıyor ve yarın tekrar kontrol edeceğim.
+ÇIKIŞ:   Cihaz 4B3338E8, Engine v1.4.2 üzerinde çalışıyor ve yarın tekrar kontrol edicem.
+         (device ID ve versiyon numarası dokunulmadan kalır)
+```
+
+*(`--style whatsapp --seed 0` ile birebir tekrarlanabilir.)*
+
+Tasarımın tamamı için: [`turkish_human_writing_naturalizer_plan.md`](turkish_human_writing_naturalizer_plan.md) (53 bölümlük teknik mimari + ürün planı).
+
+## Özellikler
+
+- 🗣️ **Gerçek ünlü uyumu** — `geliyorum→geliyom`, `yapacağım→yapıcam`, `olacağım→olucam` (dar ünlü + ikinci ünlü uyumu koda gömülü, düz `string.replace()` değil)
+- 🔗 **de/da/ki/mi motoru** — standalone bağlaç/soru ekini morfolojik olarak doğrulayıp önceki kelimeyle bitiştirir; `evde` gibi ek olan durumlara asla dokunmaz
+- 🧠 **Gerçek morfolojik analiz** — [zeyrek](https://pypi.org/project/zeyrek/) ile POS/lemma/morfem analizi (JVM gerekmez)
+- 🌳 **Opsiyonel dependency parsing** — Stanza ile cümlenin ana yüklemini (ROOT) bulup ona daha yüksek öncelik verir
+- 🛡️ **Quality Gate** — sayılar, ID'ler, URL'ler, olumsuzluk yapıları hiçbir zaman değişmez; anlam bozulursa çıktı reddedilir
+- 🎭 **Persona sistemi** — `technical_engineer`, `casual`, `whatsapp` gibi stiller, her biri farklı hata dağılımına sahip
+- 🎲 **Seed tabanlı reproducibility** — aynı girdi + aynı seed = aynı çıktı, test edilebilir ve hata ayıklanabilir
+- 🤖 **Opsiyonel LLM stil katmanı** — Claude API ile fazla resmi ifadeleri doğallaştırma (opt-in, varsayılan kapalı/ücretsiz)
+- 📊 **Opsiyonel embedding tabanlı anlam kontrolü** — orijinal ve humanize edilmiş metin arasında cosine similarity (opt-in)
+
+## Hızlı Başlangıç
 
 ```bash
-git clone https://github.com/Kutluhankurt/turkish-humanizer.git
-cd turkish-humanizer
+git clone https://github.com/Kutluhankurt/Insanlastir.git
+cd Insanlastir
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
 .venv/bin/pip install -e .
+
+.venv/bin/insanlastir "Ben de yarın tekrar kontrol edeceğim." --style whatsapp --seed 0
+# -> Bende yarın tekrar kontrol edicem.
 ```
 
-`pip install -e .` hem bağımlılıkları kurar hem de `turkish-humanizer` komutunu
-PATH'e ekler. Yalnızca bağımlılıkları kurmak isterseniz `pip install -r requirements.txt`
-yeterlidir.
+`pip install -e .` hem bağımlılıkları kurar hem de `insanlastir` komutunu
+PATH'e ekler. Yalnızca bağımlılıkları kurmak isterseniz
+`pip install -r requirements.txt` yeterlidir.
+
+> İlk çalıştırmada morfolojik analiz kütüphanesi (zeyrek) ~4 saniye süren
+> bir sözlük yüklemesi yapar ve gerekiyorsa küçük bir NLTK veri dosyasını
+> (`punkt_tab`) otomatik indirir. Bu bir defalık/süreç başına maliyettir.
 
 ### Docker ile
 
@@ -38,70 +82,16 @@ docker compose up --build
 ### Komut satırı
 
 ```bash
-turkish-humanizer "Ben de yarın tekrar kontrol edeceğim." --style whatsapp --seed 3
-# çıktı: Bende yarın tekrar kontrol edicem.
+insanlastir "Ben de yarın tekrar kontrol edeceğim." --style whatsapp --seed 0
 
 # stdin'den:
-echo "Kontroller gerçekleştirilmiştir." | turkish-humanizer --style technical_engineer
+echo "Kontroller gerçekleştirilmiştir." | insanlastir --style technical_engineer
 
 # debug trace ile JSON çıktı:
-turkish-humanizer "Her şeyi gözden geçireceğim." --style whatsapp --json
+insanlastir "Her şeyi gözden geçireceğim." --style whatsapp --json
 ```
 
 Kurulum yapmadan da çalıştırılabilir: `python -m app.cli "..." --style whatsapp`
-
-> İlk çalıştırmada morfolojik analiz kütüphanesi (zeyrek) ~4 saniye süren
-> bir sözlük yüklemesi yapar ve gerekiyorsa küçük bir NLTK veri dosyasını
-> (`punkt_tab`) otomatik indirir. Bu bir defalık/süreç başına maliyettir.
-
-### Naturalizer (Faz 2, opt-in — ücretli)
-
-Varsayılan olarak Naturalizer katmanı no-op'tur (metni değiştirmez, ücretsiz).
-Claude API ile gerçek LLM tabanlı stil dönüşümünü etkinleştirmek için:
-
-```bash
-.venv/bin/pip install -e ".[llm]"
-export ANTHROPIC_API_KEY="sk-ant-..."
-turkish-humanizer "Kontroller gerçekleştirilmiş olup herhangi bir problem tespit edilmemiştir." --style whatsapp
-```
-
-`ANTHROPIC_API_KEY` ayarlanmadığı veya `anthropic` paketi kurulu olmadığı
-sürece hiçbir API çağrısı yapılmaz ve hiçbir maliyet oluşmaz — pipeline
-sessizce no-op'a düşer. Bu katman **Claude Opus 5** (`claude-opus-5`)
-kullanır; her `/humanize` isteği gerçek para harcar, bu yüzden kendi API
-anahtarınızla bilinçli olarak etkinleştirmeniz gerekir.
-
-### Semantic Guardian (Faz 3, opt-in — yerel, ağır bağımlılık)
-
-Varsayılan olarak `quality_passed`/`semantic_score` alanları anlam
-benzerliğini kontrol ETMEZ (Bölüm 19 embedding kontrolü kapalıdır).
-Çok dilli embedding tabanlı (`intfloat/multilingual-e5-small`) gerçek
-benzerlik kontrolünü etkinleştirmek için:
-
-```bash
-.venv/bin/pip install -e ".[semantic]"
-```
-
-API maliyeti yoktur (model yerelde çalışır) ama `torch` gibi ağır bir
-bağımlılık kurar ve ilk çalıştırmada Hugging Face'ten ~470MB model
-indirir — bu yüzden opt-in tutuldu, Faz 1/2'nin hafif kurulumunu
-bozmasın diye. Kurulu değilse `semantic_score` `null` döner ve Quality
-Gate bu kontrolü sessizce atlar.
-
-### Dependency parsing (opt-in — yerel, ağır bağımlılık)
-
-Varsayılan olarak Human Error Engine, bir cümledeki tüm yüklem
-adaylarına eşit ağırlık verir. Stanza (Türkçe UD IMST treebank) ile
-gerçek ROOT tespitini etkinleştirmek için:
-
-```bash
-.venv/bin/pip install -e ".[dependency]"
-```
-
-Etkinleştirildiğinde, cümlenin ana yüklemi (ROOT) alt cümledeki bir
-fiile göre konuşma diline dönüştürülmeye daha yatkın olur (Bölüm 5'teki
-`predicate` ağırlığı, 4.0). Kurulu değilse davranış değişmez. Aynı
-`torch` tabanlı ağır bağımlılık uyarısı burada da geçerli.
 
 ### API
 
@@ -111,13 +101,58 @@ fiile göre konuşma diline dönüştürülmeye daha yatkın olur (Bölüm 5'tek
 # Etkileşimli dokümantasyon: http://127.0.0.1:8000/docs
 ```
 
-Örnek istek:
-
 ```bash
 curl -X POST http://127.0.0.1:8000/humanize \
   -H "Content-Type: application/json" \
   -d '{"text": "Yarın tekrar kontrol edeceğim.", "style": "whatsapp", "seed": 3, "error_level": 3}'
 ```
+
+## Opsiyonel katmanlar (opt-in)
+
+Hepsi varsayılan olarak **kapalı**: kurulu değillerse sessizce no-op'a
+düşerler, pipeline hiçbir zaman çökmez.
+
+| Katman | Ne yapar | Nasıl açılır | Maliyet |
+|---|---|---|---|
+| **Naturalizer** (Faz 2) | Claude API (`claude-opus-5`) ile fazla resmi/yapay ifadeleri doğallaştırır | `pip install -e ".[llm]"` + `export ANTHROPIC_API_KEY=...` | Ücretli (kendi API anahtarınız) |
+| **Semantic Guardian** (Faz 3) | Çok dilli embedding (`multilingual-e5-small`) ile anlam benzerliği kontrolü | `pip install -e ".[semantic]"` | Ücretsiz, yerel — ~470MB model indirir |
+| **Dependency Parsing** | Stanza (Türkçe UD) ile cümlenin ana yüklemini (ROOT) bulup öncelik verir | `pip install -e ".[dependency]"` | Ücretsiz, yerel — ağır bağımlılık (torch) |
+
+## Mimari
+
+```text
+LLM Output
+    ↓
+Turkish Naturalizer      (opt-in, Claude API)
+    ↓
+de/da/ki/mi Motoru       (morfolojik doğrulama ile bitiştirme)
+    ↓
+Human Error Engine       (yüklem, sözlük, typo, noktalama)
+    ↓
+Quality Gate             (negation + protected tokens + sayı + anlam)
+    ↓
+Humanized Output
+```
+
+Detaylı mimari, ağırlık formülleri, persona şemaları ve yol haritası:
+[`turkish_human_writing_naturalizer_plan.md`](turkish_human_writing_naturalizer_plan.md).
+
+## Kapsam
+
+**Çalışıyor:**
+- Yüklem çekim dönüşümleri (ünlü uyumuyla) — `app/error_engine/predicate_rules.py`
+- Gerçek morfolojik analiz (zeyrek) — `app/morphology/analyzer.py`
+- de/da/ki/mi motoru — `app/error_engine/baglac_rules.py`
+- Negation guard (gerçek `Neg` morfemi + fallback) — `app/guardian/negation.py`
+- Human Error Dictionary + known mistakes — `data/`
+- Typo/noktalama motorları, protected tokens, Quality Gate
+- Seed tabanlı reproducibility, debug trace, versiyonlama
+- FastAPI `/humanize` endpoint, CLI, Docker
+- Naturalizer (opt-in, Claude API), Semantic Guardian (opt-in, embedding), Dependency Parsing (opt-in, Stanza)
+
+**Henüz yok:**
+- de/da/ki/mi motoru tam bağlamsal disambiguation yapmıyor (zeyrek'te istatistiksel disambiguator yok)
+- Gerçek dataset (Faz 4) ve A/B değerlendirmesi (Bölüm 38) — insan verisi/anotasyon gerektiriyor
 
 ## Testler
 
@@ -125,64 +160,18 @@ curl -X POST http://127.0.0.1:8000/humanize \
 .venv/bin/python -m pytest tests/ -v
 ```
 
-CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
-(bkz. `.github/workflows/ci.yml`).
+CI, her push/PR'da Python 3.8 ve 3.11 üzerinde (opt-in katmanlar dahil)
+test paketini çalıştırır — bkz. [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-## Faz 1 kapsamı: ne var, ne yok
+## Katkıda Bulunma
 
-**Çalışıyor:**
-- Yüklem çekim dönüşümleri, gerçek Türkçe ünlü uyumuyla (`-yorum→-yom`,
-  `-acağım/-eceğim→-ıcam/-icem/-ucam/-ücem`, ünlü uyumu koda gömülü) —
-  `app/error_engine/predicate_rules.py`
-- Gerçek morfolojik analiz (`zeyrek`, Zemberek'in saf Python portu; JVM
-  gerekmiyor) — POS etiketleri, lemma, morfem listesi (`Neg`/`Fut`/`Prog1`
-  gibi) — `app/morphology/analyzer.py` (plan Bölüm 50)
-- `de/da/ki/mi` motoru: standalone "de/da/ki" ve soru eki ("mi/musun/mı"
-  vb.) token'larını morfolojik analizle doğrulayıp önceki kelimeyle
-  bitiştirir (`ben de geleceğim` → `bende gelicem`) —
-  `app/error_engine/baglac_rules.py` (plan Bölüm 9)
-- Negation guard artık gerçek `Neg` morfemi arıyor (bilinmeyen/konuşma
-  dili kelimelerde sonek tabanlı fallback'e düşüyor) —
-  `app/guardian/negation.py` (plan Bölüm 18, 51)
-- Human Error Dictionary (çok varyantlı) + known_mistakes (tek varyantlı) —
-  `data/human_error_dictionary.json`, `data/known_mistakes.json`
-- Typo engine (silme, tekrarlama, komşu tuş) — `app/error_engine/typo_rules.py`
-- Noktalama düzensizlikleri — `app/error_engine/punctuation_rules.py`
-- Protected tokens (URL, IP, ID, versiyon, tarih, para birimi, sık İngilizce
-  teknik terimler) — `app/guardian/protected_tokens.py`
-- Quality Gate (negation + protected token + sayı + hata yoğunluğu) —
-  `app/guardian/quality_gate.py`
-- Seed tabanlı reproducibility, dictionary/rule engine versiyonlama, debug
-  trace (plan Bölüm 53) — `app/error_engine/engine.py`
-- FastAPI `/humanize` endpoint (plan Bölüm 29) — `app/api/humanize.py`
-
-- Naturalizer (Faz 2): Claude API (`claude-opus-5`) ile LLM tabanlı stil
-  dönüşümü — **opt-in**, `ANTHROPIC_API_KEY` yoksa/`anthropic` kurulu
-  değilse no-op'a düşer, hata pipeline'ı çökertmez —
-  `app/naturalizer/naturalizer.py`
-- Semantic Guardian (Faz 3): çok dilli embedding (`multilingual-e5-small`)
-  tabanlı cosine similarity — **opt-in**, `sentence-transformers` kurulu
-  değilse `semantic_score` `null` döner, Quality Gate kontrolü atlar —
-  `app/guardian/semantic.py`
-- Dependency parsing: Stanza (Türkçe UD IMST) ile gerçek ROOT tespiti,
-  cümlenin ana yüklemine Bölüm 5'teki `predicate` ağırlığını (4.0)
-  uygular — **opt-in**, kurulu değilse tüm yüklem adayları eskisi gibi
-  eşit ağırlıklı kalır — `app/morphology/dependency.py`. Negation
-  guard'a kasıtlı olarak bağlanmadı (bkz. plan Bölüm 50'deki gerekçe:
-  cross-text parse hizalama kırılgan bir problem)
-
-**Henüz stub / sonraki fazlar:**
-- `de/da/ki/mi` motoru **olası** POS'a bakıyor, tam bağlamsal
-  disambiguation yapmıyor (zeyrek'te istatistiksel disambiguator yok) —
-  bkz. plan Bölüm 50'deki sınırlama notu
-- `scripts/build_dataset.py`, `scripts/evaluate.py` — çalışan iskelet var,
-  gerçek anotasyon/kalite süreci Faz 4 işi
-
-## Sıradaki adım
-
-Faz 1-3'ün çekirdeği tamamlandı. Kalan büyük iş: gerçek bir dataset
-(Faz 4, Bölüm 31-33) toplamak ve A/B değerlendirmesi (Bölüm 38) yapmak.
+Issue ve PR'lara açığız. Büyük bir değişiklik öncesi bir issue açıp
+tartışmak, gereksiz iş kaybını önler.
 
 ## Lisans
 
 [MIT](LICENSE)
+
+---
+
+Faydalı bulduysanız ⭐ bırakmayı unutmayın.

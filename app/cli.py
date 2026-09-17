@@ -1,7 +1,7 @@
 """Komut satırı arayüzü.
 
 Kurulumdan sonra (`pip install -e .`):
-    turkish-humanizer "Yarın tekrar kontrol edeceğim." --style whatsapp
+    insanlastir "Yarın tekrar kontrol edeceğim." --style whatsapp
 
 Kurulum yapmadan:
     python -m app.cli "Yarın tekrar kontrol edeceğim." --style whatsapp
@@ -22,7 +22,7 @@ def _available_styles():
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="turkish-humanizer",
+        prog="insanlastir",
         description="Türkçe LLM çıktısını daha doğal insan yazımına yaklaştırır (Faz 1 rule engine).",
     )
     parser.add_argument("text", nargs="?", help="Humanize edilecek metin. Verilmezse stdin'den okunur.")
