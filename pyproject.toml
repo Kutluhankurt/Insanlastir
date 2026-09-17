@@ -13,6 +13,7 @@ dependencies = [
     "fastapi>=0.104,<1.0",
     "uvicorn[standard]>=0.24,<1.0",
     "pyyaml>=6.0,<7.0",
+    "zeyrek==0.1.2",
 ]
 
 [project.optional-dependencies]

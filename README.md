@@ -37,8 +37,8 @@ docker compose up --build
 ### Komut satırı
 
 ```bash
-turkish-humanizer "Yarın tekrar kontrol edeceğim." --style whatsapp --seed 3
-# çıktı: Yarın tekrar kontrol edicem.
+turkish-humanizer "Ben de yarın tekrar kontrol edeceğim." --style whatsapp --seed 3
+# çıktı: Bende yarın tekrar kontrol edicem.
 
 # stdin'den:
 echo "Kontroller gerçekleştirilmiştir." | turkish-humanizer --style technical_engineer
@@ -48,6 +48,10 @@ turkish-humanizer "Her şeyi gözden geçireceğim." --style whatsapp --json
 ```
 
 Kurulum yapmadan da çalıştırılabilir: `python -m app.cli "..." --style whatsapp`
+
+> İlk çalıştırmada morfolojik analiz kütüphanesi (zeyrek) ~4 saniye süren
+> bir sözlük yüklemesi yapar ve gerekiyorsa küçük bir NLTK veri dosyasını
+> (`punkt_tab`) otomatik indirir. Bu bir defalık/süreç başına maliyettir.
 
 ### API
 
@@ -80,13 +84,22 @@ CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
 - Yüklem çekim dönüşümleri, gerçek Türkçe ünlü uyumuyla (`-yorum→-yom`,
   `-acağım/-eceğim→-ıcam/-icem/-ucam/-ücem`, ünlü uyumu koda gömülü) —
   `app/error_engine/predicate_rules.py`
+- Gerçek morfolojik analiz (`zeyrek`, Zemberek'in saf Python portu; JVM
+  gerekmiyor) — POS etiketleri, lemma, morfem listesi (`Neg`/`Fut`/`Prog1`
+  gibi) — `app/morphology/analyzer.py` (plan Bölüm 50)
+- `de/da/ki/mi` motoru: standalone "de/da/ki" ve soru eki ("mi/musun/mı"
+  vb.) token'larını morfolojik analizle doğrulayıp önceki kelimeyle
+  bitiştirir (`ben de geleceğim` → `bende gelicem`) —
+  `app/error_engine/baglac_rules.py` (plan Bölüm 9)
+- Negation guard artık gerçek `Neg` morfemi arıyor (bilinmeyen/konuşma
+  dili kelimelerde sonek tabanlı fallback'e düşüyor) —
+  `app/guardian/negation.py` (plan Bölüm 18, 51)
 - Human Error Dictionary (çok varyantlı) + known_mistakes (tek varyantlı) —
   `data/human_error_dictionary.json`, `data/known_mistakes.json`
 - Typo engine (silme, tekrarlama, komşu tuş) — `app/error_engine/typo_rules.py`
 - Noktalama düzensizlikleri — `app/error_engine/punctuation_rules.py`
 - Protected tokens (URL, IP, ID, versiyon, tarih, para birimi, sık İngilizce
   teknik terimler) — `app/guardian/protected_tokens.py`
-- Negation guard (sonek tabanlı, morfoloji olmadan) — `app/guardian/negation.py`
 - Quality Gate (negation + protected token + sayı + hata yoğunluğu) —
   `app/guardian/quality_gate.py`
 - Seed tabanlı reproducibility, dictionary/rule engine versiyonlama, debug
@@ -95,20 +108,21 @@ CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
 
 **Henüz stub / sonraki fazlar:**
 - `app/naturalizer/` — LLM tabanlı stil dönüşümü şu an no-op (Faz 2)
-- `app/morphology/analyzer.py`, `dependency.py` — gerçek Zemberek/Stanza
-  entegrasyonu yok; basit sonek heuristiği kullanılıyor (plan Bölüm 50,
-  Faz 1 sonrası öncelikli iş)
+- `app/morphology/dependency.py` — gerçek dependency parsing yok (Stanza/
+  Trankit entegrasyonu yapılmadı); predicate tespiti şu an yalnızca POS
+  etiketiyle kısmen karşılanıyor (plan Bölüm 50)
 - `app/guardian/semantic.py` — embedding tabanlı benzerlik yok (Faz 3)
-- `de/da/ki/mi` bağlaç/ek ayrımı motoru (plan Bölüm 9) henüz eklenmedi;
-  gerçek morfolojik analiz olmadan güvenilir yapılamayacağı için Bölüm 50
-  entegrasyonuna bağlı bırakıldı
+- `de/da/ki/mi` motoru **olası** POS'a bakıyor, tam bağlamsal
+  disambiguation yapmıyor (zeyrek'te istatistiksel disambiguator yok) —
+  bkz. plan Bölüm 50'deki sınırlama notu
 - `scripts/build_dataset.py`, `scripts/evaluate.py` — çalışan iskelet var,
   gerçek anotasyon/kalite süreci Faz 4 işi
 
 ## Sıradaki adım
 
-Plan Bölüm 46'daki sıraya göre: Zemberek/Stanza entegrasyonu (Bölüm 50) ve
-`de/da/ki/mi` motoru (Bölüm 9), ardından Naturalizer LLM katmanı (Faz 2).
+Dependency parsing (Stanza/Trankit) eklenerek predicate tespiti ve
+negation guard bağlamsal hale getirilebilir; ardından Naturalizer LLM
+katmanı (Faz 2).
 
 ## Lisans
 

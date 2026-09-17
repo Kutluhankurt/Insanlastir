@@ -1,26 +1,35 @@
-"""Morfolojik analiz katmanı.
+"""Morfolojik analiz katmanı (Bölüm 50).
 
-STUB: Bölüm 50'de karara bağlanan hibrit stack (Zemberek + Stanza/Trankit)
-henüz entegre edilmedi. Bu modül, gerçek analiz gelene kadar Human Error
-Engine'in çalışabilmesi için basit sözlük/ek tabanlı bir yaklaşım sunar.
+Bölüm 50'de Zemberek + Stanza/Trankit hibrit stack önerilmişti. Gerçek
+entegrasyon denemesinde şu bulgular ortaya çıktı:
 
-Zemberek entegrasyonu eklendiğinde ``analyze()`` fonksiyonu JPype köprüsü
-üzerinden gerçek morfolojik ayrıştırma ve de/da/ki/mi disambiguation
-sonucu dönecek şekilde değiştirilmeli; confidence skoru gerçek analiz
-güveninden gelmeli (bkz. Bölüm 51 - fallback stratejisi).
+- Zemberek-NLP artık Maven Central'da YOK (JCenter/Bintray kapandığından
+  beri) ve GitHub'da da önceden derlenmiş jar yayınlamıyor; kullanmak
+  için kaynak koddan Maven ile derlemek gerekiyor. Bu, "GitHub repo'dan
+  doğrudan kullanılabilir" hedefiyle çelişiyor (JVM + çok modüllü Maven
+  build + Java toolchain gereksinimi).
+- Bunun yerine ``zeyrek`` (Zemberek morfolojisinin saf Python portu,
+  PyPI'da) kullanıldı. 0.1.3 sürümü Python 3.8'de `set[X]` generic alias
+  sözdizimi (PEP 585, 3.9+) nedeniyle çöküyor; bu yüzden ``zeyrek==0.1.2``
+  sabitlendi (bkz. requirements.txt / pyproject.toml).
+- zeyrek, Zemberek'in istatistiksel disambiguator'ını İÇERMİYOR: yalnızca
+  aday parse listesi döner, bağlama göre en olası olanı SEÇMEZ. Bu yüzden
+  "kelime için X POS'u olası mı" sorusuna cevap verebiliyoruz ama "bu
+  cümlede kesin doğru okuma budur" diyemiyoruz. Bölüm 9'daki de/da/ki/mi
+  motoru ve Bölüm 18'deki negation guard bu sınırlamayı göz önünde
+  bulundurarak (aday listesinde ilgili POS/morfem VARSA olası say)
+  tasarlandı.
+
+Stanza/Trankit (dependency parsing) entegrasyonu henüz yapılmadı;
+``dependency.py`` hâlâ no-op stub'tır.
 """
+import sys
 from dataclasses import dataclass
-from typing import Optional
+from functools import lru_cache
+from typing import List, Optional, Set
 
-# Sık kullanılan yüklem/fiil çekim ekleri - tam POS tagger gelene kadar
-# "bu kelime muhtemelen bir yüklem" heuristiği için kullanılır.
-_VERB_SUFFIX_HINTS = (
-    "yorum", "yoruz", "yorsun", "yorsunuz", "yor",
-    "acağım", "eceğim", "acağız", "eceğiz",
-    "dı", "di", "du", "dü", "tı", "ti", "tu", "tü",
-    "mış", "miş", "muş", "müş",
-    "malı", "meli",
-)
+_analyzer = None
+_nltk_data_ready = False
 
 
 @dataclass
@@ -30,15 +39,79 @@ class MorphResult:
     confidence: float
 
 
-def analyze(token: str) -> MorphResult:
-    """Tek bir kelime için basitleştirilmiş morfolojik ipucu döner.
+def _get_zeyrek_analyzer():
+    """zeyrek.MorphAnalyzer singleton'ını tembel şekilde oluşturur.
 
-    Gerçek bir morfolojik analiz DEĞİLDİR; yalnızca ek kalıplarına bakarak
-    kaba bir tahmin yapar. Düşük confidence, Bölüm 51'deki eşik mekanizması
-    ile dönüşümün atlanmasını sağlar.
+    İlk çağrıda ~3-4 saniye sürer (sözlük yükleme); süreç ömrü boyunca
+    bir kez oluşturulur. NLTK'nın 'punkt_tab' verisi eksikse otomatik
+    indirir (Bölüm - "doğrudan kullanılabilir" hedefiyle uyumlu, manuel
+    kurulum adımı gerektirmez).
     """
-    lower = token.lower()
-    is_predicate = lower.endswith(_VERB_SUFFIX_HINTS)
-    # Heuristik olduğu için confidence kasıtlı olarak orta seviyede tutulur.
-    confidence = 0.75 if is_predicate else 0.5
-    return MorphResult(token=token, is_likely_predicate=is_predicate, confidence=confidence)
+    global _analyzer, _nltk_data_ready
+    if _analyzer is not None:
+        return _analyzer
+
+    import zeyrek
+
+    _analyzer = zeyrek.MorphAnalyzer()
+    if not _nltk_data_ready:
+        try:
+            _analyzer.analyze("deneme")
+        except LookupError:
+            import nltk
+
+            print("[morphology] NLTK 'punkt_tab' verisi indiriliyor (ilk çalıştırma)...", file=sys.stderr)
+            nltk.download("punkt_tab", quiet=True)
+        _nltk_data_ready = True
+    return _analyzer
+
+
+@lru_cache(maxsize=4096)
+def analyze_word(word: str):
+    """Tek bir kelime için zeyrek'ten ham parse aday listesini döner.
+
+    Kelime tanınmıyorsa (OOV) boş liste döner.
+    """
+    try:
+        analyzer = _get_zeyrek_analyzer()
+    except Exception:
+        return []
+    results = analyzer.analyze(word)
+    if not results or not results[0]:
+        return []
+    parses = results[0]
+    if len(parses) == 1 and parses[0].pos == "Unk":
+        return []
+    return parses
+
+
+def pos_tags(word: str) -> Set[str]:
+    return {p.pos for p in analyze_word(word)}
+
+
+def is_predicate_like(word: str) -> bool:
+    """Kelimenin en az bir olası okumasında fiil (Verb) olup olmadığı."""
+    return "Verb" in pos_tags(word)
+
+
+def has_negation(word: str) -> bool:
+    """En az bir olası parse'da 'Neg' morfemi var mı.
+
+    Kasıtlı olarak liberal: disambiguation yapılamadığından, olumsuzluk
+    OLASI ise (kesin değilse bile) True döner. Bölüm 18'deki negation
+    guard için amaç kaçırılan gerçek bir olumsuzluğu yakalamaktır; bu
+    yönde hata yapmak (false positive), ters yönde hata yapmaktan
+    (gerçek bir olumsuzluk kaybını kaçırmak) çok daha güvenlidir.
+    """
+    return any("Neg" in p.morphemes for p in analyze_word(word))
+
+
+def is_known_word(word: str) -> bool:
+    return len(analyze_word(word)) > 0
+
+
+def analyze(token: str) -> MorphResult:
+    """Geriye dönük uyumlu özet sonuç (bkz. eski heuristik sürüm)."""
+    known = is_known_word(token)
+    confidence = 0.9 if known else 0.2
+    return MorphResult(token=token, is_likely_predicate=is_predicate_like(token), confidence=confidence)

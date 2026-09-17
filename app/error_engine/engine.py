@@ -2,7 +2,8 @@
 
 Pipeline (Faz 1 kapsamı - Naturalizer şu an no-op):
 
-    text -> naturalizer (no-op) -> protected span tespiti -> tokenize
+    text -> naturalizer (no-op) -> de/da/ki/mi motoru (Bölüm 9)
+         -> protected span tespiti -> tokenize
          -> predicate + typo (token bazlı) -> lexical dictionary (metin bazlı)
          -> punctuation -> Quality Gate -> HumanizeResult
 """
@@ -14,7 +15,7 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from app.error_engine import lexical_rules, predicate_rules, punctuation_rules, scoring, typo_rules
+from app.error_engine import baglac_rules, lexical_rules, predicate_rules, punctuation_rules, scoring, typo_rules
 from app.guardian import quality_gate as quality_gate_module
 from app.guardian.protected_tokens import find_protected_spans, is_inside_protected
 from app.morphology.tokenizer import tokenize
@@ -98,12 +99,26 @@ def humanize(
         return HumanizeResult(original=text, output=naturalized, style=style, changes=[], seed=seed)
 
     errors = persona.get("errors", {})
+    predicate_rate = errors.get("predicate_variation_rate", 0.0)
+
+    error_count = 0
+
+    naturalized, join_changes = baglac_rules.apply(
+        naturalized, predicate_weights["base_weights"], predicate_rate, rng,
+    )
+    for jc in join_changes:
+        changes.append(ChangeTrace(
+            rule=jc.rule, before=jc.before, after=jc.after, probability=jc.probability,
+            triggered=True, dictionary_version=dictionary_version,
+            rule_engine_version=RULE_ENGINE_VERSION, seed=seed, fallback_level=0,
+        ))
+        error_count += 1
+
     protected_spans = find_protected_spans(naturalized)
     tokens = tokenize(naturalized)
 
     output_parts: List[str] = []
     last_end = 0
-    error_count = 0
 
     for token in tokens:
         output_parts.append(naturalized[last_end:token.start])
@@ -115,7 +130,6 @@ def humanize(
             continue
 
         transformed = word
-        predicate_rate = errors.get("predicate_variation_rate", 0.0)
         match = predicate_rules.apply_first_matching(word)
         if match is not None:
             weight_key = _PREDICATE_RULE_TO_WEIGHT_KEY.get(match.rule, "predicate")

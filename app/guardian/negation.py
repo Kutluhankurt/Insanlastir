@@ -3,22 +3,21 @@
 Olumsuzluk yapılarının orijinal ve humanize edilmiş metin arasında
 korunup korunmadığını kontrol eder.
 
-Tam morfolojik analiz (Bölüm 50) gelmeden önce genel bir "-ma-/-me-"
-regex'i denenmişti ancak bu, "-meli" (gereklilik: "yapmalı") gibi
-olumsuzlukla ilgisi olmayan eklerle karışıyordu (ör. "güncellenmeli"
-yanlışlıkla olumsuz sayılıyordu). Bunun yerine, sözcük SONUNDA
-görülen ve gerçekten olumsuzluk taşıyan sonek/kelime listesine dayanan
-daha dar ama güvenilir bir kontrol kullanılıyor. Bu liste eksiksiz
-değildir (Bölüm 50 entegrasyonu ile morfolojik temelli hale
-getirilmelidir) ama yanlış pozitif üretmemeyi önceliklendirir.
+Bölüm 50 entegrasyonu ile artık birincil kaynak zeyrek'in morfolojik
+analizi: bir kelime tanınıyorsa (OOV değilse) 'Neg' morfemi arandığı
+için "-meli" (gereklilik) gibi yanıltıcı yüzeysel benzerliklere
+düşmüyor. Kelime tanınmıyorsa (ör. Human Error Engine'in ürettiği
+"görülmüyo" gibi konuşma dili biçimleri; bkz. Bölüm 51 - fallback
+stratejisi) eski sonek tabanlı sözlük listesine düşülür.
 """
 from typing import List
 
+from app.morphology import analyzer
 from app.morphology.tokenizer import tokenize
 
-# Sözcük SONUNDA aranan olumsuzluk belirteçleri. "-meli/-malı" gibi salt
-# gereklilik ekleriyle karışmaması için olumsuzluk+gereklilik birleşik
-# hallerini (mamalı/memeli) ayrıca listeliyoruz.
+# Fallback: zeyrek'in OOV bıraktığı (ör. Human Error Engine'in ürettiği
+# konuşma dili biçimleri) kelimeler için sözcük SONUNDA aranan
+# olumsuzluk belirteçleri.
 _NEGATION_SUFFIXES = (
     "değildir", "değil", "yok", "hariç",
     "mamalıdır", "memelidir", "mamalı", "memeli",
@@ -31,9 +30,16 @@ _NEGATION_SUFFIXES = (
 )
 
 
+def _word_has_negation(word: str) -> bool:
+    if analyzer.is_known_word(word):
+        return analyzer.has_negation(word)
+    lower = word.lower()
+    return lower.endswith(_NEGATION_SUFFIXES)
+
+
 def count_negation_markers(text: str) -> int:
-    words: List[str] = [t.text.lower() for t in tokenize(text) if t.is_word]
-    return sum(1 for word in words if word.endswith(_NEGATION_SUFFIXES))
+    words: List[str] = [t.text for t in tokenize(text) if t.is_word]
+    return sum(1 for word in words if _word_has_negation(word))
 
 
 def negation_preserved(original: str, humanized: str) -> bool:

@@ -1928,21 +1928,53 @@ TRmorph
   - Klasik finite-state analiz, aktif bakımı yok, önerilmiyor
 ```
 
-## Karar: Hibrit stack
+## Karar: Hibrit stack (ilk plan) → gerçek entegrasyonda revize edildi
+
+İlk planlanan karar buydu:
 
 ```text
 Zemberek (JPype üzerinden)
     → suffix-level ayrıştırma (-yorum, -acağım, de/da/ki/mi disambiguation)
-    → Human Error Engine'in Bölüm 6 ve 9'daki dönüşümleri için birincil kaynak
-
 Stanza veya Trankit
     → POS tagging + dependency parsing
-    → Predicate/yüklem tespiti (Bölüm 5) ve negation guard (Bölüm 18) için
 ```
 
-**Gerekçe:** Zemberek'in ek grafiği (suffix graph), sistemin temelini oluşturan ek-seviyesi dönüşümler (Bölüm 6) ve de/da/ki/mi ayrımı (Bölüm 9) için en eksiksiz kaynak. Zemberek'in kendi disambiguator'ı ("ben de" bağlaç mı, "evde" ek mi) MVP'de sıfırdan bir sınıflandırıcı yazmak yerine doğrudan kullanılmalı; güven skoru düşük olan durumlar için (Bölüm 51'deki) rule-based fallback devreye girer. Stanza/Trankit ise dependency parse üzerinden cümledeki yüklemi ve olumsuzluk yapısını (Bölüm 18) güvenilir şekilde bulmak için gerekli — Zemberek bunu sağlamıyor.
+**Gerçek entegrasyon denemesinde (bkz. `app/morphology/analyzer.py`) şu bulgular
+ortaya çıktı ve karar revize edildi:**
 
-JVM köprüsü (JPype) production'da ekstra süreç yönetimi gerektirir; bu maliyet, Faz 1 planlamasına (Bölüm 41) eklenmelidir.
+- Zemberek-NLP, JCenter/Bintray'in 2021'de kapanmasından beri **Maven
+  Central'da yayınlı değil** (doğrulandı: `search.maven.org` sorgusu 0
+  sonuç döndü) ve GitHub'da önceden derlenmiş jar da yok. Kullanmak için
+  kaynak koddan çok modüllü bir Maven build gerekiyor — bu, "GitHub
+  repo'dan doğrudan kullanılabilir" hedefiyle (JVM + Maven toolchain
+  gereksinimi) doğrudan çelişiyor.
+- Bunun yerine **`zeyrek`** (Zemberek morfolojisinin saf Python portu,
+  PyPI) kullanıldı: `pip install zeyrek`, JVM gerekmiyor.
+  - `zeyrek==0.1.3` Python 3.8'de `set[X]` (PEP 585, 3.9+) sözdizimi
+    yüzünden çöküyor; `zeyrek==0.1.2`'ye sabitlendi.
+  - İlk kullanımda NLTK'nın `punkt_tab` tokenizer verisini indirmesi
+    gerekiyor; bu otomatik yapılacak şekilde koda eklendi (manuel kurulum
+    adımı gerektirmiyor).
+  - zeyrek, Zemberek'in **istatistiksel disambiguator'ını içermiyor** —
+    yalnızca aday parse listesi döner, bağlama göre en olası olanı
+    seçmez. Bu yüzden "bu POS/morfem olası mı" sorusuna cevap
+    verilebiliyor ama "cümlede kesin doğru okuma budur" denemiyor.
+    de/da/ki/mi motoru (Bölüm 9) ve negation guard (Bölüm 18) bu
+    sınırlamayı göz önünde bulundurarak (liberal/olası-say yaklaşımı,
+    olasılıksal uygulama) tasarlandı.
+
+Stanza/Trankit (dependency parsing) entegrasyonu henüz yapılmadı;
+`app/morphology/dependency.py` hâlâ no-op stub. Bir sonraki adım olarak
+kalıyor — predicate tespiti şu an zeyrek'in POS etiketleriyle (`Verb`)
+kısmen karşılanıyor, tam dependency parse (ROOT ilişkisi) yok.
+
+**Gerekçe (revize):** zeyrek, JVM/Maven derleme maliyeti olmadan
+Zemberek'in ek-seviyesi morfolojik gücünün büyük kısmını (POS, lemma,
+morfem listesi, `Neg`/`Fut`/`Prog1` gibi etiketler) sağlıyor. Bu, "clone
+edip doğrudan kullan" hedefi için Zemberek+JPype'a göre çok daha pratik.
+Bedeli: istatistiksel disambiguation eksikliği ve dependency parsing'in
+hâlâ eksik olması — bu ikisi ilerideki bir fazda (muhtemelen Stanza
+eklenerek) kapatılmalı.
 
 ---
 
