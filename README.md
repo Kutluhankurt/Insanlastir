@@ -8,8 +8,8 @@ hale getiren kural tabanlı bir humanizer.
 
 Tasarım dokümanı: [`turkish_human_writing_naturalizer_plan.md`](turkish_human_writing_naturalizer_plan.md).
 
-Bu depo, plandaki **Faz 1 — Rule Engine** kapsamını gerçekleyen ilk çalışan
-iskeleti içerir.
+Bu depo, plandaki **Faz 1 — Rule Engine** kapsamını ve **Faz 2 — Naturalizer**
+katmanının (opt-in, Claude API tabanlı) ilk sürümünü içerir.
 
 ## Kurulum
 
@@ -52,6 +52,23 @@ Kurulum yapmadan da çalıştırılabilir: `python -m app.cli "..." --style what
 > İlk çalıştırmada morfolojik analiz kütüphanesi (zeyrek) ~4 saniye süren
 > bir sözlük yüklemesi yapar ve gerekiyorsa küçük bir NLTK veri dosyasını
 > (`punkt_tab`) otomatik indirir. Bu bir defalık/süreç başına maliyettir.
+
+### Naturalizer (Faz 2, opt-in — ücretli)
+
+Varsayılan olarak Naturalizer katmanı no-op'tur (metni değiştirmez, ücretsiz).
+Claude API ile gerçek LLM tabanlı stil dönüşümünü etkinleştirmek için:
+
+```bash
+.venv/bin/pip install -e ".[llm]"
+export ANTHROPIC_API_KEY="sk-ant-..."
+turkish-humanizer "Kontroller gerçekleştirilmiş olup herhangi bir problem tespit edilmemiştir." --style whatsapp
+```
+
+`ANTHROPIC_API_KEY` ayarlanmadığı veya `anthropic` paketi kurulu olmadığı
+sürece hiçbir API çağrısı yapılmaz ve hiçbir maliyet oluşmaz — pipeline
+sessizce no-op'a düşer. Bu katman **Claude Opus 5** (`claude-opus-5`)
+kullanır; her `/humanize` isteği gerçek para harcar, bu yüzden kendi API
+anahtarınızla bilinçli olarak etkinleştirmeniz gerekir.
 
 ### API
 
@@ -106,8 +123,12 @@ CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
   trace (plan Bölüm 53) — `app/error_engine/engine.py`
 - FastAPI `/humanize` endpoint (plan Bölüm 29) — `app/api/humanize.py`
 
+- Naturalizer (Faz 2): Claude API (`claude-opus-5`) ile LLM tabanlı stil
+  dönüşümü — **opt-in**, `ANTHROPIC_API_KEY` yoksa/`anthropic` kurulu
+  değilse no-op'a düşer, hata pipeline'ı çökertmez —
+  `app/naturalizer/naturalizer.py`
+
 **Henüz stub / sonraki fazlar:**
-- `app/naturalizer/` — LLM tabanlı stil dönüşümü şu an no-op (Faz 2)
 - `app/morphology/dependency.py` — gerçek dependency parsing yok (Stanza/
   Trankit entegrasyonu yapılmadı); predicate tespiti şu an yalnızca POS
   etiketiyle kısmen karşılanıyor (plan Bölüm 50)
@@ -121,8 +142,8 @@ CI, her push/PR'da Python 3.8 ve 3.11 üzerinde test paketini çalıştırır
 ## Sıradaki adım
 
 Dependency parsing (Stanza/Trankit) eklenerek predicate tespiti ve
-negation guard bağlamsal hale getirilebilir; ardından Naturalizer LLM
-katmanı (Faz 2).
+negation guard bağlamsal hale getirilebilir; ardından Semantic Guardian'ın
+embedding tabanlı benzerlik kontrolü (Faz 3).
 
 ## Lisans
 

@@ -105,6 +105,19 @@ Buradaki amaç kullanıcıların işlemleri daha hızlı yapabilmesi.
 Operasyon tarafında da işleri biraz daha verimli hale getirmek istiyoruz.
 ```
 
+### Uygulama notu (Faz 2)
+
+Naturalizer, Claude API (`claude-opus-5`) ile gerçeklendi
+(`app/naturalizer/naturalizer.py`, `app/naturalizer/prompts.py`). Bölüm
+52'de bu katmanın ana değişken maliyet kalemi olacağı öngörülmüştü; bu
+yüzden **varsayılan olarak kapalı (no-op)** tasarlandı: `ANTHROPIC_API_KEY`
+ortam değişkeni ayarlanmadığı veya `anthropic` paketi kurulu olmadığı
+sürece hiçbir API çağrısı yapılmaz, pipeline değişiklik yapmadan devam
+eder. Kullanıcı kendi API anahtarını ayarlayıp `pip install -e ".[llm]"`
+ile bilinçli olarak etkinleştirir. LLM çağrısı başarısız olursa (Bölüm 51
+fallback felsefesi) orijinal metin değiştirilmeden döner, pipeline
+çökmez.
+
 ---
 
 # 4. Human Error Engine

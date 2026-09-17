@@ -16,5 +16,5 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -r requirements.txt
-      - run: pip install -e .
+      - run: pip install -e ".[llm]"
       - run: pytest tests/ -v
